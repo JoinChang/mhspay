@@ -203,8 +203,8 @@ object Hook : BaseHook() {
                     // 检查 fragmentInstance 是否为 MineSettingEmployerFragment 的实例
                     if (fragmentInstance::class.java.name == "com.qixin.mihuas.module.main.mine.setting.fragment.MineSettingEmployerFragment") {
                         Log.i("名称 $fragmentInstance")
-                        Log.i("名称hidesetting ${xConfig.hidesetting}")
-                        if (!xConfig.hidesetting){
+                        val hidesetting = try { xConfig.hidesetting } catch (e: Exception) { Log.e("读取hidesetting失败: ${e.message}"); false }
+                        if (!hidesetting){
                             executeCustomFunction(fragmentInstance, classLoader)
                         }
 
@@ -299,6 +299,7 @@ object Hook : BaseHook() {
                         XposedHelpers.setObjectField(newItemView, "label", "指纹认证")
                         XposedHelpers.setIntField(newItemView, "iconRes", svg_icon_install_manage)
                         XposedHelpers.callMethod(newItemView, "setCornerSide", 1)
+                        XposedHelpers.callMethod(newItemView, "componentInitialize")
 
                         // 设置布局参数，避免重叠，使用WRAP_CONTENT
                         val layoutParams = FrameLayout.LayoutParams(
@@ -324,7 +325,7 @@ object Hook : BaseHook() {
                                     this.text = text
                                     textSize = 16f
                                     setPadding(0, 30, 0, 30)
-                                    setTextColor(android.graphics.Color.WHITE)
+                                    val tv2 = android.util.TypedValue(); ctx.theme.resolveAttribute(android.R.attr.textColorPrimary, tv2, true); setTextColor(ctx.resources.getColor(tv2.resourceId, ctx.theme))
                                     // 设置点击效果（波纹或变色）
                                     val outValue = android.util.TypedValue()
                                     ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
@@ -371,6 +372,20 @@ object Hook : BaseHook() {
                                     android.widget.Toast.makeText(ctx, "启动失败: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             }
+
+                            // 3.5 总开关
+                            val allSwitch = android.widget.Switch(ctx).apply {
+                                text = "总开关"
+                                textSize = 16f
+                                setPadding(0, 40, 0, 40)
+                                isChecked = sharedPreferences.getBoolean("allswitch", false)
+
+                                setOnCheckedChangeListener { _, isChecked ->
+                                    sharedPreferences.edit().putBoolean("allswitch", isChecked).apply()
+                                    android.widget.Toast.makeText(ctx, if(isChecked) "已开启" else "已关闭", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            rootLayout.addView(allSwitch)
 
                             // 4. 添加 Switch 开关项 (即之前的第3项)
                             val miSwitch = android.widget.Switch(ctx).apply {
